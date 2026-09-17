@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include<string.h>
 #include "encode.h"
 #include "types.h"
 
@@ -73,7 +74,7 @@ Status open_files(EncodeInfo *encInfo)
     // No failure return e_success
     return e_success;
 }
-Status read_and_validate_encode_args(char *argv[], EncodeInfo *encInfo)
+Status read_and_validate_encode_args(int argc,char *argv[], EncodeInfo *encInfo)
 {
     /*check valid number of arguments
     check if src file is .bmp or not if not print error and retrun e_failure if valid then store it in structure encinfo->src_image_fname=argv[2]
@@ -81,9 +82,32 @@ Status read_and_validate_encode_args(char *argv[], EncodeInfo *encInfo)
     check if argv[4] is null or not if it is null the you only give file name and store encinfo->stego_image_fname="output.bmp"
     if user given output first validate it if it is a .bmp or not and then store encinfo->stego_image_fname=argv[4] if not
     valid then print proper error and return e_failure*/
-    if(open_files(encInfo)==e_failure)return e_failure
-    //at last return e_success
-
+    if(argc<3 || argc>4)
+    {
+        printf("insufficient number of arguments.\n");
+        return e_failure;
+    }
+    if((argv[2][strlen(argv[2])-4]!='.') || (argv[2][strlen(argv[2])-3]!='b') || (argv[2][strlen(argv[2])-2]!='m')|| (argv[2][strlen(argv[2])-1]!='p'))
+    {
+        printf("Source/input file must be .bmp file\n");
+        return e_failure;
+    }
+    encinfo->src_image_fname=argv[2];
+    encinfo->secert_fname=argv[3];
+    if(argv[4]==NULL)
+    encinfo->stego_image_fname="output.bmp";
+    else
+    {
+        if((argv[4][strlen(argv[4])-4]!='.') || (argv[4][strlen(argv[4])-3]!='b') || (argv[4][strlen(argv[4])-2]!='m')|| (argv[4][strlen(argv[4])-1]!='p'))
+    {
+        printf("Output file must be .bmp file\n");
+        return e_failure;
+    }
+    else
+    encinfo->stego_image_fname=argv[4];
+    }
+    if(open_files(encInfo)==e_failure)return e_failure;
+    return e_success;//at last return e_success
 }
 Status open_files(EncodeInfo *encInfo)
 {
