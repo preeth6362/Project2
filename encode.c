@@ -131,7 +131,11 @@ Status do_encoding(EncodeInfo *encInfo)
         printf("Error copying header\n");
         return e_failure;
     }
-    if(encode_magic_string(MAGIC_STRING,encInfo)==e_failure)return e_failure;
+    if(encode_magic_string(MAGIC_STRING,encInfo)==e_failure)
+    {
+        printf("error encoding magic string\n");
+        return e_failure;
+    }
     if(encode_secret_file_extn_size(encInfo)==e_failure)return e_failure;
 }
 Status check_capacity(EncodeInfo *encInfo)
@@ -168,6 +172,17 @@ Status encode_magic_string(const char *magic_string, EncodeInfo *encInfo)
     3) write encoded buff to output_file do 1,2&3 2 times because magicstring is 2 bytes
     
     if everything ok then e_sucess*/
+    char buff[8];int i=0;
+    while(magic_string[i]!='\0')
+    {
+        if(fread(buff,8,1,encInfo->fptr_src_image)!=1)
+        return e_fialure;
+        encode_byte_to_lsb(magic_string[i],buffer);
+        if(fwrite(buff,8,1,encInfo->fptr_stego_image)!=1)
+        return e_failure; 
+    i++;
+    }
+    return e_success;
 }
 Status encode_byte_to_lsb(char data, char *image_buffer)
 {
@@ -176,6 +191,14 @@ Status encode_byte_to_lsb(char data, char *image_buffer)
      get ith bit of data
      if set set lsb of image_buffer[7-i]
      if 0 clr lsb of image_buffer[7-i]*/
+     for(int i=7;i>=0;i--)
+     {
+        if(data&(1<<i))
+        image_buffer[7-i]=image_buffer[7-i]|(1);
+        else
+        image_buffer[7-i]=image_buffer[7-i]&(~1);
+     }
+     return e_success;
 }
 Status encode_secret_file_extn_size(EncodeInfo *encInfo)
 {
@@ -183,12 +206,30 @@ Status encode_secret_file_extn_size(EncodeInfo *encInfo)
     strcpy(extn_secret_file,dot);
     declare buffer[32] read 32 bytes from srcfile
     encode_size_to_lsb(strlen(extn_secret_file),buffer)*/
+    char *dot=strchr(encInfo->secret_fname,'.');
+    strcpy(encInfo->extn_secret_file,dot);
+    char buff[32];
+    if(fread(buff,32,1,encInfo->fptr_src_image)!=1)
+    return e_failure;
+    if(encode_size_to_lsb(strlen(encInfo->extn_secret_file),buff)!=e_success)
+    return e_failure;
+    if(fwrite(buff,32,1,encInfo->fptr_stego_image)!=1)
+    return e_failure;
+return e_success;
 }
-Status encode_size_to_lsb(int size,  char *image_buffer)
+Status encode_size_to_lsb(unsigned int size,char *image_buffer)
 {
     /*get bits from data from msb to lsb and set or clear lsb of image buffer from 0 t0 7 according t0 bit got use loop run for 8 times
      for(int i=31;i>=0;i--)
      get ith bit of data
      if set set lsb of image_buffer[31-i]
      if 0 clr lsb of image_buffer[31-i]*/
+      for(int i=31;i>=0;i--)
+     {
+        if(size&(1<<i))
+        image_buffer[31-i]=image_buffer[31-i]|(1);
+        else
+        image_buffer[31-i]=image_buffer[31-i]&(~1);
+     }
+     return e_success;
 }
