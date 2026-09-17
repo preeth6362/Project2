@@ -109,27 +109,36 @@ Status read_and_validate_encode_args(int argc,char *argv[], EncodeInfo *encInfo)
     if(open_files(encInfo)==e_failure)return e_failure;
     return e_success;//at last return e_success
 }
-Status open_files(EncodeInfo *encInfo)
+/*Status open_files(EncodeInfo *encInfo)
 {
-    /*open source file in read mode encInfo->src_image_fname then check if it is opened (returns NULL adrees)or not and if not 
+    open source file in read mode encInfo->src_image_fname then check if it is opened (returns NULL adrees)or not and if not 
     opened print error and return E_failure if it successs then store in encInfo->fptr_src_image=address
     open seceret file in read mode and do same as before
     open output file in write mode ans store it in respective structure file pointer if all sucess return e_success 
-    */
-}
+    
+}*/
 Status do_encoding(EncodeInfo *encInfo)
 {
     /*first check capacity check_capacity(encInfo)==e_fialure print error and retyurn e_failure if success*/
-    if(check_capacity(encInfo)==e_fialure)return e_failure; 
+    if(check_capacity(encInfo)==e_fialure)
+    {
+        printf("file capacity insufficient\n");
+        return e_failure;
+    } 
     rewind(fptr_src_image);rewind(fptr_secret);
-    if(copy_bmp_header(encInfo->fptr_src_image,encInfo->fptr_stego_image)==e_failure)return e_failure
+    if(copy_bmp_header(encInfo->fptr_src_image,encInfo->fptr_stego_image)==e_failure)
+    {
+        printf("Error copying header\n");
+        return e_failure;
+    }
     if(encode_magic_string(MAGIC_STRING,encInfo)==e_failure)return e_failure;
     if(encode_secret_file_extn_size(encInfo)==e_failure)return e_failure;
 }
 Status check_capacity(EncodeInfo *encInfo)
 {
     encInfo->image_capacity=get_image_size_for_bmp(encInfo->fptr_src_image)
-    if((14+get_file_size(encInfo->fptr_secret))*8>encInfo->image_capacity)return e_failure;
+    if((14+get_file_size(encInfo->fptr_secret))*8>encInfo->image_capacity)
+    return e_failure;
     else
     return e_success;
 }
@@ -144,6 +153,12 @@ Status copy_bmp_header(FILE *fptr_src_image, FILE *fptr_dest_image)
    read 54 bytes from src file
    write 54 bytes from dest file
    validate return return e_succcess*/
+   char buff[54];
+   if(fread(buff,54,1,fptr_src_image)!=1)
+    return e_failure;
+   if(fwrite(buff,54,1,fptr_dest_image)!=1)
+    return e_failure;
+   return e_success;
 }
 Status encode_magic_string(const char *magic_string, EncodeInfo *encInfo)
 {

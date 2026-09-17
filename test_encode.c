@@ -8,7 +8,7 @@ int main(int argc,char *argv[])
     if(check_operation_type(argv[1][1])==e_encode)
     {
         if(read_and_validate_encode_args(argc,argv,&encInfo)==e_failur)//print error return e_failure
-        /*if success do_encoding(&encInfo)*/
+        do_encoding(&encInfo)
     }
     return 0;
 }
