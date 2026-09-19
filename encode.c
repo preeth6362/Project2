@@ -136,7 +136,32 @@ Status do_encoding(EncodeInfo *encInfo)
         printf("error encoding magic string\n");
         return e_failure;
     }
-    if(encode_secret_file_extn_size(encInfo)==e_failure)return e_failure;
+    if(encode_secret_file_extn_size(encInfo)==e_failure)
+    {
+        printf("error encoding file extension size\n");
+        return e_failure;
+    }
+    if(encode_secret_file_extn(encInfo)==e_failure)
+    {
+        printf("error encoding secret file extension\n");
+        return e_failure;
+    }
+    if(encode_secret_file_size(encInfo)==e_failure)
+    {
+        printf("error encoding secret file\n");
+        return e_failure;
+    }
+    if(encode_secret_file_data(encInfo)==e_failure)
+    {
+        printf("error encoding secret file data\n");
+        return e_failure;
+    }
+    if(copy_remaining_img_data(encInfo)==e_failure)
+    {
+        printf("error encoding remaining data\n");
+        return e_failure;
+    }
+    return e_success;
 }
 Status check_capacity(EncodeInfo *encInfo)
 {
@@ -177,7 +202,7 @@ Status encode_magic_string(const char *magic_string, EncodeInfo *encInfo)
     {
         if(fread(buff,8,1,encInfo->fptr_src_image)!=1)
         return e_fialure;
-        encode_byte_to_lsb(magic_string[i],buffer);
+        if(encode_byte_to_lsb(magic_string[i],buffer)!=e_success)return e_fialure;
         if(fwrite(buff,8,1,encInfo->fptr_stego_image)!=1)
         return e_failure; 
     i++;
@@ -232,4 +257,60 @@ Status encode_size_to_lsb(unsigned int size,char *image_buffer)
         image_buffer[31-i]=image_buffer[31-i]&(~1);
      }
      return e_success;
+}
+Status encode_secret_file_extn(EncodeInfo *encInfo)
+{
+    int i;
+    while(encinfo->extn_secret_file[i]!='\0')
+    {
+        char buff[8];
+        if(fread(buff,8,1,encInfo->fptr_src_image)!=1)
+        return e_failure;
+        encode_byte_to_lsb(encinfo->extn_secret_file[i],buff);
+        if(fwrite(buff,8,1,encInfo->fptr_stego_image)!=1)
+        return e_failure;
+        /*read 8 bytes from input file to buffer
+        encode_byte_to_lsb(encinfo->extn_secret_file[i],buff)
+        write encoded buff to output file*/
+    }
+    return e_success
+}
+Status encode_secret_file_size(EncodeInfo *encInfo)
+{
+    char buff[32];
+    if(fread(buff,32,1,encInfo->fptr_src_image)!=1)
+    return e_failure;
+    size_to_lsb(encInfo->size_seceret_file,buff);
+    if(fwrite(buff,32,1,encInfo->fptr_stego_image)!=1)
+    return e_failure;
+return e_success;
+    /*declare buff[32bytes] becuse we are encoding a integer and integer size is 32 bite
+    read 32 bytes from input file to buff
+    call size_to_lsb(size_seceret_file,buff)
+    write encoded buff to output file*/
+}
+Status encode_secret_file_data(EncodeInfo *encInfo)
+{
+    char buff[8];char ch;
+    while((ch=getc(encInfo->fptr_secret))!=EOF)
+    {
+      if(fread(buff,8,1,encInfo->fptr_src_image)!=1)
+      return e_failure;
+      encode_byte_to_lsb(ch,buff);
+      if(fwrite(buff,8,1,encInfo->fptr_stego_image)!=1)
+      return e_failure;
+    }
+    return e_success;
+    /*declare buff[8bytes] declare char ch
+    inside loop read 8 bytes from input file read a character from seceret file 
+    call encode_byte_to_lsb(ch,buff)
+    write the encoded buffer to output file(loop condiiton secret file EOF)*/
+}
+Status copy_remaining_img_data(EncodeInfo *encInfo)
+{
+    char ch;
+    while((ch=getc(encInfo->fptr_src_image))!=EOF)
+    puts(ch,encInfo->fptr_stego_image);
+return e_success;
+/*take char ch and read byte by byte from src file and write to output file upto EOF*/
 }
