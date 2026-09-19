@@ -2,6 +2,7 @@
 #include<string.h>
 #include "encode.h"
 #include "types.h"
+#include "common.h"
 
 /* Function Definitions */
 
@@ -82,7 +83,7 @@ Status read_and_validate_encode_args(int argc,char *argv[], EncodeInfo *encInfo)
     check if argv[4] is null or not if it is null the you only give file name and store encinfo->stego_image_fname="output.bmp"
     if user given output first validate it if it is a .bmp or not and then store encinfo->stego_image_fname=argv[4] if not
     valid then print proper error and return e_failure*/
-    if(argc<3 || argc>4)
+    if(argc<4 || argc>5)
     {
         printf("insufficient number of arguments.\n");
         return e_failure;
@@ -92,10 +93,10 @@ Status read_and_validate_encode_args(int argc,char *argv[], EncodeInfo *encInfo)
         printf("Source/input file must be .bmp file\n");
         return e_failure;
     }
-    encinfo->src_image_fname=argv[2];
-    encinfo->secert_fname=argv[3];
+    encInfo->src_image_fname=argv[2];
+    encInfo->secret_fname=argv[3];
     if(argv[4]==NULL)
-    encinfo->stego_image_fname="output.bmp";
+    encInfo->stego_image_fname="output.bmp";
     else
     {
         if((argv[4][strlen(argv[4])-4]!='.') || (argv[4][strlen(argv[4])-3]!='b') || (argv[4][strlen(argv[4])-2]!='m')|| (argv[4][strlen(argv[4])-1]!='p'))
@@ -104,7 +105,7 @@ Status read_and_validate_encode_args(int argc,char *argv[], EncodeInfo *encInfo)
         return e_failure;
     }
     else
-    encinfo->stego_image_fname=argv[4];
+    encInfo->stego_image_fname=argv[4];
     }
     if(open_files(encInfo)==e_failure)return e_failure;
     return e_success;//at last return e_success
@@ -120,12 +121,12 @@ Status read_and_validate_encode_args(int argc,char *argv[], EncodeInfo *encInfo)
 Status do_encoding(EncodeInfo *encInfo)
 {
     /*first check capacity check_capacity(encInfo)==e_fialure print error and retyurn e_failure if success*/
-    if(check_capacity(encInfo)==e_fialure)
+    if(check_capacity(encInfo)==e_failure)
     {
         printf("file capacity insufficient\n");
         return e_failure;
     } 
-    rewind(fptr_src_image);rewind(fptr_secret);
+    rewind(encInfo->fptr_src_image);rewind(encInfo->fptr_secret);
     if(copy_bmp_header(encInfo->fptr_src_image,encInfo->fptr_stego_image)==e_failure)
     {
         printf("Error copying header\n");
@@ -165,16 +166,18 @@ Status do_encoding(EncodeInfo *encInfo)
 }
 Status check_capacity(EncodeInfo *encInfo)
 {
-    encInfo->image_capacity=get_image_size_for_bmp(encInfo->fptr_src_image)
-    if((14+get_file_size(encInfo->fptr_secret))*8>encInfo->image_capacity)
+    encInfo->image_capacity=get_image_size_for_bmp(encInfo->fptr_src_image);
+    uint sfs=get_file_size(encInfo->fptr_secret,encInfo);
+    if((14+sfs)*8>encInfo->image_capacity)
     return e_failure;
     else
     return e_success;
 }
-uint get_file_size(FILE *fptr)
+uint get_file_size(FILE *fptr,EncodeInfo *encInfo)
 {
    fseek(fptr,0,SEEK_END);
    encInfo->size_secret_file=ftell(fptr);
+   return encInfo->size_secret_file;
 }
 Status copy_bmp_header(FILE *fptr_src_image, FILE *fptr_dest_image)
 {
@@ -201,8 +204,8 @@ Status encode_magic_string(const char *magic_string, EncodeInfo *encInfo)
     while(magic_string[i]!='\0')
     {
         if(fread(buff,8,1,encInfo->fptr_src_image)!=1)
-        return e_fialure;
-        if(encode_byte_to_lsb(magic_string[i],buffer)!=e_success)return e_fialure;
+        return e_failure;
+        if(encode_byte_to_lsb(magic_string[i],buff)!=e_success)return e_failure;
         if(fwrite(buff,8,1,encInfo->fptr_stego_image)!=1)
         return e_failure; 
     i++;
@@ -260,27 +263,28 @@ Status encode_size_to_lsb(unsigned int size,char *image_buffer)
 }
 Status encode_secret_file_extn(EncodeInfo *encInfo)
 {
-    int i;
-    while(encinfo->extn_secret_file[i]!='\0')
+    int i=0;
+    while(encInfo->extn_secret_file[i]!='\0')
     {
         char buff[8];
         if(fread(buff,8,1,encInfo->fptr_src_image)!=1)
         return e_failure;
-        encode_byte_to_lsb(encinfo->extn_secret_file[i],buff);
+        encode_byte_to_lsb(encInfo->extn_secret_file[i],buff);
         if(fwrite(buff,8,1,encInfo->fptr_stego_image)!=1)
         return e_failure;
+    i++;
         /*read 8 bytes from input file to buffer
         encode_byte_to_lsb(encinfo->extn_secret_file[i],buff)
         write encoded buff to output file*/
     }
-    return e_success
+    return e_success;
 }
 Status encode_secret_file_size(EncodeInfo *encInfo)
 {
     char buff[32];
     if(fread(buff,32,1,encInfo->fptr_src_image)!=1)
     return e_failure;
-    size_to_lsb(encInfo->size_seceret_file,buff);
+    encode_size_to_lsb(encInfo->size_secret_file,buff);
     if(fwrite(buff,32,1,encInfo->fptr_stego_image)!=1)
     return e_failure;
 return e_success;
@@ -310,7 +314,7 @@ Status copy_remaining_img_data(EncodeInfo *encInfo)
 {
     char ch;
     while((ch=getc(encInfo->fptr_src_image))!=EOF)
-    puts(ch,encInfo->fptr_stego_image);
+    putc(ch,encInfo->fptr_stego_image);
 return e_success;
 /*take char ch and read byte by byte from src file and write to output file upto EOF*/
 }
